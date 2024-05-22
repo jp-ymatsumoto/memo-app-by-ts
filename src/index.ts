@@ -9,20 +9,21 @@ const memoList = document.getElementById("list") as HTMLDivElement;
 const memoTitle = document.getElementById("memoTitle") as HTMLInputElement;
 const memoBody = document.getElementById("memoBody") as HTMLTextAreaElement;
 const addButton = document.getElementById("add") as HTMLButtonElement;
-const deleteButton = document.getElementById("delete") as HTMLButtonElement;
 const editButton = document.getElementById("edit") as HTMLButtonElement;
 const saveButton = document.getElementById("save") as HTMLButtonElement;
+const deleteButton = document.getElementById("delete") as HTMLButtonElement;
 
 // ************************************************************
 // 処理
 // ************************************************************
+
 let memos: Memo[] = [];
 let memoIndex: number = 0;
 
 addButton.addEventListener("click", clickAddMemo);
-deleteButton.addEventListener("click", clickDeleteMemo);
 editButton.addEventListener("click", clickEditMemo);
 saveButton.addEventListener("click", clickSaveMemo);
+deleteButton.addEventListener("click", clickDeleteMemo);
 
 init();
 
@@ -34,23 +35,22 @@ init();
  * 初期化
  */
 function init() {
+  // ローカルストレージからすべてのメモを取得する
   memos = readLocalStorage(STORAGE_KEY);
   if (memos.length === 0) {
+    // 新しいメモを２つ作成する
     memos.push(newMemo());
     memos.push(newMemo());
+    // すべてのメモをローカルストレージに保存する
     saveLocalStorage(STORAGE_KEY, memos);
-
-    memoIndex = 0;
-
-    setMemoElement();
-    showMemoElements(memoList, memos);
-  } else {
-    memoIndex = 0;
-    setMemoElement();
-    showMemoElements(memoList, memos);
   }
+  // すべてのメモのタイトルを一覧で表示する
+  showMemoElements(memoList, memos);
+  // メモ一覧のタイトルにアクティブなスタイルを設定する
   setActiveStyle(memoIndex + 1, true);
-
+  // 選択中のメモ情報を表示用のメモ要素に設定する
+  setMemoElement();
+  // // 保存ボタンを非表示し編集ボタンを表示にする
   setHiddenButton(saveButton, false);
   setHiddenButton(editButton, true);
 }
@@ -75,6 +75,7 @@ function newMemo(): Memo {
  */
 function setMemoElement() {
   const memo: Memo = memos[memoIndex];
+  // メモを表示する要素にタイトルと本文を設定する
   memoTitle.value = memo.title;
   memoBody.value = memo.body;
 }
@@ -85,22 +86,16 @@ function setMemoElement() {
  * @returns {HTMLDivElement}
  */
 function newMemoElement(memo: Memo): HTMLDivElement {
+  // div要素を作成する
   const div = document.createElement("div");
+  // div要素にメモのタイトルを設定する
   div.innerText = memo.title;
+  // div要素のdata-id属性にメモIDを設定する
   div.setAttribute("data-id", memo.id);
+  // div要素のclass属性にスタイルを設定する
   div.classList.add("w-full", "p-sm");
   div.addEventListener("click", selectedMemo);
   return div;
-}
-
-function setEditMode(mode: "enabled" | "disabled") {
-  if (mode === "enabled") {
-    memoTitle.removeAttribute("disabled");
-    memoBody.removeAttribute("disabled");
-  } else if (mode === "disabled") {
-    memoTitle.setAttribute("disabled", "disabled");
-    memoBody.setAttribute("disabled", "disabled");
-  }
 }
 
 /**
@@ -117,29 +112,15 @@ function clearMemoElements(div: HTMLDivElement) {
  * @param {Memo[]} memos すべてのメモ
  */
 function showMemoElements(div: HTMLDivElement, memos: Memo[]) {
+  // メモ一覧をクリアする
   clearMemoElements(div);
   memos.forEach((memo) => {
+    // メモのタイトルの要素を作成する
     const memoElement = newMemoElement(memo);
+    // メモ一覧の末尾にメモのタイトルの要素を追加する
     div.appendChild(memoElement);
   });
 }
-
-/**
- * button要素の表示・非表示を設定する
- * @param {HTMLButtonElement} button
- * @param {boolean} isHidden true:
- */
-function setHiddenButton(button: HTMLButtonElement, isHidden: boolean) {
-  if (isHidden) {
-    button.removeAttribute("hidden");
-  } else {
-    button.setAttribute("hidden", "hidden");
-  }
-}
-
-// ************************************************************
-// スタイル関連の関数一覧
-// ************************************************************
 
 /**
  * div要素にアクティブスタイルを設定する
@@ -155,34 +136,117 @@ function setActiveStyle(index: number, isActive: boolean) {
     element.classList.remove("active");
   }
 }
+
+/**
+ * button要素の表示・非表示を設定する
+ * @param {HTMLButtonElement} button
+ * @param {boolean} isHidden true:
+ */
+function setHiddenButton(button: HTMLButtonElement, isHidden: boolean) {
+  if (isHidden) {
+    button.removeAttribute("hidden");
+  } else {
+    button.setAttribute("hidden", "hidden");
+  }
+}
+
+/**
+ * タイトルと本文の要素のdisabled属性を設定する
+ * @param editMode true:編集モード false:表示モード
+ */
+function setEditMode(editMode: boolean) {
+  if (editMode) {
+    memoTitle.removeAttribute("disabled");
+    memoBody.removeAttribute("disabled");
+  } else {
+    memoTitle.setAttribute("disabled", "disabled");
+    memoBody.setAttribute("disabled", "disabled");
+  }
+}
+
 // ************************************************************
 // イベント関連の関数一覧
 // ************************************************************
 
+/**
+ * 追加ボタンが押された時の処理
+ * @param {MouseEvent} event
+ */
 function clickAddMemo(event: MouseEvent) {
+  // タイトルと本文を編集モードにする
+  setEditMode(true);
+  // 保存ボタンを表示し編集ボタンを非表示にする
+  setHiddenButton(saveButton, true);
+  setHiddenButton(editButton, false);
   // 新しいメモを追加する
   memos.push(newMemo());
-  // すべてのメモを保存する
+  // すべてのメモをローカルストレージに保存する
   saveLocalStorage(STORAGE_KEY, memos);
-
-  // removeActiveStyle(
-  //   document.querySelector(`#list > li:nth-child(${memoIndex + 1})`) as HTMLDivElement
-  // );
-  setActiveStyle(memoIndex + 1, false);
-
   // 新しいメモが追加されたインデックスを設定する
   memoIndex = memos.length - 1;
-
-  console.log(`#list > li:nth-child(${memos.length})`);
-
-  console.log(document.querySelector(`#list > li:nth-child(${memos.length})`) as HTMLDivElement);
-
-  // 表示するメモを設定する
-  setMemoElement();
-  // メモの一覧をクリアから表示する
+  // メモ一覧にタイトルを表示する
   showMemoElements(memoList, memos);
-  setEditMode("enabled");
+  // メモ一覧のタイトルにアクティブなスタイルを設定する
   setActiveStyle(memoIndex + 1, true);
+  // 選択中のメモ情報を表示用のメモ要素に設定する
+  setMemoElement();
+}
+
+/**
+ * メモが選択された時の処理
+ * @param {MouseEvent} event
+ */
+function selectedMemo(event: MouseEvent) {
+  // タイトルと本文を表示モードにする
+  setEditMode(false);
+  // 保存ボタンを非表示し編集ボタンを表示にする
+  setHiddenButton(saveButton, false);
+  setHiddenButton(editButton, true);
+  // メモ一覧のタイトルにアクティブなスタイルを設定する
+  setActiveStyle(memoIndex + 1, false);
+
+  // クリックされたdiv要素を取得する
+  const target = event.target as HTMLDivElement;
+  // div要素のdata-id属性からメモIDを取得する
+  const id = target.getAttribute("data-id");
+  // すべてのメモから選択されたメモのインデックスを取得する
+  memoIndex = memos.findIndex((memo) => memo.id === id);
+  // 選択中のメモ情報を表示用のメモ要素に設定する
+  setMemoElement();
+  // メモ一覧のタイトルにアクティブなスタイルを設定する
+  setActiveStyle(memoIndex + 1, true);
+}
+
+/**
+ * 編集ボタンが押された時の処理
+ * @param {MouseEvent} event
+ */
+function clickEditMemo(event: MouseEvent) {
+  // タイトルと本文を編集モードにする
+  setEditMode(true);
+  // 保存ボタンを表示し編集ボタンを非表示にする
+  setHiddenButton(saveButton, true);
+  setHiddenButton(editButton, false);
+}
+
+/**
+ * 保存ボタンが押された時の処理
+ * @param {MouseEvent} event
+ */
+function clickSaveMemo(event: MouseEvent) {
+  const memo = memos[memoIndex];
+  memo.title = memoTitle.value;
+  memo.body = memoBody.value;
+  memo.updatedAt = Date.now();
+  // すべてのメモをローカルストレージに保存する
+  saveLocalStorage(STORAGE_KEY, memos);
+  // タイトルと本文を表示モードにする
+  setEditMode(false);
+  // 保存ボタンを非表示し編集ボタンを表示にする
+  setHiddenButton(saveButton, false);
+  setHiddenButton(editButton, true);
+  // すべてのメモのタイトルを一覧で表示する
+  showMemoElements(memoList, memos);
 }
 
 /**
@@ -206,52 +270,13 @@ function clickDeleteMemo(event: MouseEvent) {
   }
   // 表示するメモを設定する
   setMemoElement();
-  // メモの一覧をクリアから表示する
+  // タイトルと本文を表示モードにする
+  setEditMode(false);
+  // 保存ボタンを非表示し編集ボタンを表示にする
+  setHiddenButton(saveButton, false);
+  setHiddenButton(editButton, true);
+  // すべてのメモのタイトルを一覧で表示する
   showMemoElements(memoList, memos);
-  setEditMode("disabled");
-  setHiddenButton(saveButton, false);
-  setHiddenButton(editButton, true);
+  // メモ一覧のタイトルにアクティブなスタイルを設定する
   setActiveStyle(memoIndex + 1, true);
-}
-
-function clickEditMemo(event: MouseEvent) {
-  setEditMode("enabled");
-  setHiddenButton(saveButton, true);
-  setHiddenButton(editButton, false);
-}
-
-/**
- * 保存ボタンが押された時の処理
- * @param {MouseEvent} event
- */
-function clickSaveMemo(event: MouseEvent) {
-  const memo = memos[memoIndex];
-  memo.title = memoTitle.value;
-  memo.body = memoBody.value;
-  memo.updatedAt = Date.now();
-  // すべてのメモをローカルストレージに保存する
-  saveLocalStorage(STORAGE_KEY, memos);
-  setEditMode("disabled");
-  setHiddenButton(saveButton, false);
-  setHiddenButton(editButton, true);
-}
-
-/**
- * メモが選択された時の処理
- * @param {MouseEvent} event
- */
-function selectedMemo(event: MouseEvent) {
-  setEditMode("disabled");
-  setHiddenButton(saveButton, false);
-  setHiddenButton(editButton, true);
-  setActiveStyle(memoIndex + 1, false);
-
-  const target = event.target as HTMLDivElement;
-  const id = target.getAttribute("data-id");
-  memoIndex = memos.findIndex((memo) => memo.id === id);
-  setMemoElement();
-  setActiveStyle(memoIndex + 1, true);
-
-  setHiddenButton(saveButton, false);
-  setHiddenButton(editButton, true);
 }
