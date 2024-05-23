@@ -1,5 +1,6 @@
 import { Memo } from "./types";
 import { STORAGE_KEY, readLocalStorage, saveLocalStorage } from "./storage";
+import { marked } from "marked";
 
 // ************************************************************
 // 要素一覧
@@ -12,6 +13,8 @@ const addButton = document.getElementById("add") as HTMLButtonElement;
 const editButton = document.getElementById("edit") as HTMLButtonElement;
 const saveButton = document.getElementById("save") as HTMLButtonElement;
 const deleteButton = document.getElementById("delete") as HTMLButtonElement;
+const previewBody = document.getElementById("previewBody") as HTMLDivElement;
+const downloadLink = document.getElementById("download") as HTMLAnchorElement;
 
 // ************************************************************
 // 処理
@@ -24,6 +27,7 @@ addButton.addEventListener("click", clickAddMemo);
 editButton.addEventListener("click", clickEditMemo);
 saveButton.addEventListener("click", clickSaveMemo);
 deleteButton.addEventListener("click", clickDeleteMemo);
+downloadLink.addEventListener("click", clickDownloadMemo);
 
 init();
 
@@ -78,6 +82,14 @@ function setMemoElement() {
   // メモを表示する要素にタイトルと本文を設定する
   memoTitle.value = memo.title;
   memoBody.value = memo.body;
+  // markdownで記述した本文(文字列)をHTMLにパースする
+  (async () => {
+    try {
+      previewBody.innerHTML = await marked.parse(memo.body);
+    } catch (error) {
+      console.error(error);
+    }
+  })();
 }
 
 /**
@@ -158,9 +170,15 @@ function setEditMode(editMode: boolean) {
   if (editMode) {
     memoTitle.removeAttribute("disabled");
     memoBody.removeAttribute("disabled");
+    // 編集モードはtextarea要素を表示しプレビュー要素を非表示にする
+    memoBody.removeAttribute("hidden");
+    previewBody.setAttribute("hidden", "hidden");
   } else {
     memoTitle.setAttribute("disabled", "disabled");
     memoBody.setAttribute("disabled", "disabled");
+    // 表示モードはtextarea要素を非表示しプレビュー要素を表示にする
+    memoBody.setAttribute("hidden", "hidden");
+    previewBody.removeAttribute("hidden");
   }
 }
 
@@ -247,6 +265,10 @@ function clickSaveMemo(event: MouseEvent) {
   setHiddenButton(editButton, true);
   // すべてのメモのタイトルを一覧で表示する
   showMemoElements(memoList, memos);
+  // メモ一覧のタイトルにアクティブなスタイルを設定する
+  setActiveStyle(memoIndex + 1, true);
+  // 表示するメモを設定する
+  setMemoElement();
 }
 
 /**
@@ -279,4 +301,22 @@ function clickDeleteMemo(event: MouseEvent) {
   showMemoElements(memoList, memos);
   // メモ一覧のタイトルにアクティブなスタイルを設定する
   setActiveStyle(memoIndex + 1, true);
+}
+
+/**
+ * ダウンロードのリンクがクリックされた時の処理
+ * @param {MouseEvent} event
+ */
+function clickDownloadMemo(event: MouseEvent) {
+  const memo = memos[memoIndex];
+  // a要素を取得する
+  const target = event.target as HTMLAnchorElement;
+  // ファイル名を指定する
+  target.download = `${memo.title}.md`;
+  // ファイルのデータを設定する
+  target.href = URL.createObjectURL(
+    new Blob([memo.body], {
+      type: "application/octet-stream",
+    })
+  );
 }
